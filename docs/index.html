@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsightCommerce AI | Customer Intelligence</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js" charset="utf-8"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Header ── */
+        header {
+            padding: 18px 28px;
+            border-bottom: 1px solid #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .header-left h1 { font-size: 1.25rem; font-weight: 700; color: #f8fafc; }
+        .header-left p  { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+
+        .badge {
+            background: #1e3a5f;
+            color: #60a5fa;
+            font-size: 0.65rem;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+        }
+
+        /* ── Main layout ── */
+        main {
+            display: flex;
+            flex: 1;
+            min-height: 0;
+        }
+
+        /* ── Left panel ── */
+        .controls {
+            width: 300px;
+            min-width: 300px;
+            padding: 24px 20px;
+            border-right: 1px solid #1e293b;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #475569;
+            margin-bottom: 14px;
+        }
+
+        /* Sliders */
+        .slider-item { margin-bottom: 18px; }
+        .slider-item:last-child { margin-bottom: 0; }
+
+        .slider-item label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+
+        .slider-item label .val {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #f8fafc;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 4px;
+            border-radius: 2px;
+            background: #1e293b;
+            outline: none;
+            cursor: pointer;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+        /* Prediction card */
+        .prediction-card {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 18px;
+            border: 1px solid #334155;
+        }
+
+        .card-sublabel { font-size: 0.72rem; color: #64748b; }
+
+        #segment-name {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f8fafc;
+            margin: 6px 0 12px;
+            min-height: 1.4em;
+            transition: color 0.3s;
+        }
+
+        .metric-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+        }
+
+        #confidence-val {
+            font-size: 2.2rem;
+            font-weight: 800;
+            line-height: 1;
+            color: #3b82f6;
+            transition: color 0.3s;
+        }
+
+        .metric-unit { font-size: 0.75rem; color: #64748b; margin-bottom: 4px; }
+
+        /* Probability bars */
+        .prob-bars { display: flex; flex-direction: column; gap: 12px; }
+
+        .prob-row-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: #94a3b8;
+            margin-bottom: 5px;
+            align-items: center;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+
+        .prob-bar-track {
+            height: 5px;
+            background: #0f172a;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .prob-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.35s ease;
+        }
+
+        /* ── Chart area ── */
+        .chart-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 24px;
+            min-width: 0;
+        }
+
+        .chart-header { margin-bottom: 12px; }
+        .chart-title   { font-size: 0.95rem; font-weight: 600; color: #f8fafc; }
+        .chart-subtitle { font-size: 0.75rem; color: #475569; margin-top: 2px; }
+
+        #chart3d { flex: 1; min-height: 0; }
+
+        .loading-msg {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #475569;
+            font-size: 0.875rem;
+        }
+
+        /* ── Footer ── */
+        footer {
+            padding: 10px 28px;
+            border-top: 1px solid #1e293b;
+            font-size: 0.72rem;
+            color: #475569;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        footer a { color: #3b82f6; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+
+        /* ── Mobile ── */
+        @media (max-width: 700px) {
+            main { flex-direction: column; }
+            .controls {
+                width: 100%;
+                min-width: unset;
+                border-right: none;
+                border-bottom: 1px solid #1e293b;
+            }
+            .chart-area { height: 480px; }
+            body { min-height: unset; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="header-left">
+        <h1>🛍️ InsightCommerce AI</h1>
+        <p>Customer Intelligence · Churn Prediction · RFM Segmentation</p>
+    </div>
+    <span class="badge">STATIC DEMO</span>
+</header>
+
+<main>
+    <!-- ── Controls ── -->
+    <aside class="controls">
+
+        <div>
+            <div class="section-label">Target Customer Profile</div>
+            <div class="slider-item">
+                <label>Days Since Last Purchase (Recency) <span class="val" id="recency-val">30</span></label>
+                <input type="range" id="recency" min="0" max="365" value="30" step="1">
+            </div>
+            <div class="slider-item">
+                <label>Number of Shopping Trips (Frequency) <span class="val" id="frequency-val">5</span></label>
+                <input type="range" id="frequency" min="1" max="50" value="5" step="1">
+            </div>
+            <div class="slider-item">
+                <label>Total Lifetime Spend (£) <span class="val" id="monetary-val">£500</span></label>
+                <input type="range" id="monetary" min="1" max="20000" value="500" step="50">
+            </div>
+        </div>
+
+        <div>
+            <div class="section-label">AI Prediction</div>
+            <div class="prediction-card">
+                <div class="card-sublabel">Assigned Segment</div>
+                <div id="segment-name">Loading…</div>
+                <div class="metric-row">
+                    <div id="confidence-val">--%</div>
+                    <div class="metric-unit">confidence</div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="section-label">Probability Breakdown</div>
+            <div class="prob-bars" id="prob-bars"></div>
+        </div>
+
+    </aside>
+
+    <!-- ── Chart ── -->
+    <section class="chart-area">
+        <div class="chart-header">
+            <div class="chart-title">Customer Base 3D Topology</div>
+            <div class="chart-subtitle">Log-transformed RFM space · 1,000 sampled customers · drag to rotate</div>
+        </div>
+        <div id="chart3d">
+            <div class="loading-msg">Loading customer data…</div>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <span>KMeans segmentation · 4,312 customers · UK Online Retail II dataset</span>
+    <span>Prediction via centroid distance &nbsp;·&nbsp; <a href="https://github.com/adamzikri30" target="_blank">GitHub</a></span>
+</footer>
+
+<script>
+    const CLUSTER_NAMES = {
+        0: "The Lost (High Churn)",
+        1: "At-Risk Loyalists",
+        2: "The Champions",
+        3: "Recent Bargain Hunters"
+    };
+
+    const CLUSTER_COLORS = {
+        0: "#ef4444",
+        1: "#f97316",
+        2: "#22c55e",
+        3: "#3b82f6"
+    };
+
+    let appData = null;
+    let chartReady = false;
+
+    // ── Math helpers ──────────────────────────────────────────────────────────
+
+    function euclidean(a, b) {
+        return Math.sqrt(a.reduce((sum, ai, i) => sum + (ai - b[i]) ** 2, 0));
+    }
+
+    function predict(recency, frequency, monetary) {
+        const { mean, scale } = appData.scaler;
+        const centroids = appData.centroids;
+
+        const logR = Math.log1p(recency);
+        const logF = Math.log1p(frequency);
+        const logM = Math.log1p(monetary);
+
+        const scaled = [
+            (logR - mean[0]) / scale[0],
+            (logF - mean[1]) / scale[1],
+            (logM - mean[2]) / scale[2]
+        ];
+
+        const distances = centroids.map(c => euclidean(scaled, c));
+        const cluster   = distances.indexOf(Math.min(...distances));
+
+        // Inverse-distance weighting → probability-like scores
+        const inv   = distances.map(d => 1 / (d + 1e-9));
+        const total = inv.reduce((a, b) => a + b, 0);
+        const probs = inv.map(v => v / total);
+
+        return { cluster, probs };
+    }
+
+    // ── Chart ─────────────────────────────────────────────────────────────────
+
+    const LAYOUT = {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor:  'rgba(0,0,0,0)',
+        font: { color: '#94a3b8', size: 11 },
+        margin: { l: 0, r: 0, t: 10, b: 0 },
+        legend: {
+            x: 0, y: 1,
+            bgcolor: 'rgba(15,23,42,0.85)',
+            bordercolor: '#334155',
+            borderwidth: 1,
+            font: { size: 10 }
+        },
+        scene: {
+            bgcolor: '#0a1628',
+            xaxis: { title: 'Log Recency',   gridcolor: '#1e293b', color: '#475569', zerolinecolor: '#1e293b' },
+            yaxis: { title: 'Log Frequency',  gridcolor: '#1e293b', color: '#475569', zerolinecolor: '#1e293b' },
+            zaxis: { title: 'Log Monetary',   gridcolor: '#1e293b', color: '#475569', zerolinecolor: '#1e293b' },
+            camera: { eye: { x: 1.6, y: 1.6, z: 1.0 } }
+        }
+    };
+
+    const CONFIG = { responsive: true, displayModeBar: true, displaylogo: false };
+
+    // Build one scatter3d trace per cluster + the target pin
+    function buildTraces(r, f, m) {
+        const traces = [0, 1, 2, 3].map(cid => {
+            const pts = appData.customers.filter(c => c.cluster === cid);
+            return {
+                type: 'scatter3d',
+                mode: 'markers',
+                name: CLUSTER_NAMES[cid],
+                x: pts.map(c => Math.log1p(c.recency)),
+                y: pts.map(c => Math.log1p(c.frequency)),
+                z: pts.map(c => Math.log1p(c.monetary)),
+                marker: { size: 3, color: CLUSTER_COLORS[cid], opacity: 0.35 },
+                hovertemplate:
+                    `<b>${CLUSTER_NAMES[cid]}</b><br>` +
+                    `Recency: %{x:.2f}<br>Freq: %{y:.2f}<br>Monetary: %{z:.2f}<extra></extra>`
+            };
+        });
+
+        traces.push({
+            type: 'scatter3d',
+            mode: 'markers',
+            name: '🎯 Target Customer',
+            x: [Math.log1p(r)],
+            y: [Math.log1p(f)],
+            z: [Math.log1p(m)],
+            marker: { size: 10, color: '#ff0000', symbol: 'diamond', opacity: 1 },
+            hovertemplate:
+                `<b>Target Customer</b><br>R: ${r} days<br>F: ${f} trips<br>M: £${m}<extra></extra>`
+        });
+
+        return traces;
+    }
+
+    function renderChart(r, f, m) {
+        if (!chartReady) {
+            Plotly.newPlot('chart3d', buildTraces(r, f, m), LAYOUT, CONFIG);
+            chartReady = true;
+        } else {
+            // Only move the target pin — don't re-render the whole scatter
+            Plotly.restyle('chart3d',
+                { x: [[Math.log1p(r)]], y: [[Math.log1p(f)]], z: [[Math.log1p(m)]] },
+                [4]  // index 4 = target trace
+            );
+        }
+    }
+
+    // ── UI updates ────────────────────────────────────────────────────────────
+
+    function updateUI(r, f, m) {
+        const { cluster, probs } = predict(r, f, m);
+        const color      = CLUSTER_COLORS[cluster];
+        const confidence = (probs[cluster] * 100).toFixed(1);
+
+        document.getElementById('segment-name').textContent  = CLUSTER_NAMES[cluster];
+        document.getElementById('segment-name').style.color  = color;
+        document.getElementById('confidence-val').textContent = `${confidence}%`;
+        document.getElementById('confidence-val').style.color = color;
+
+        document.getElementById('prob-bars').innerHTML = [0, 1, 2, 3].map(cid => `
+            <div>
+                <div class="prob-row-header">
+                    <span>
+                        <span class="dot" style="background:${CLUSTER_COLORS[cid]}"></span>
+                        ${CLUSTER_NAMES[cid]}
+                    </span>
+                    <span>${(probs[cid] * 100).toFixed(1)}%</span>
+                </div>
+                <div class="prob-bar-track">
+                    <div class="prob-bar-fill"
+                         style="width:${(probs[cid] * 100).toFixed(1)}%;background:${CLUSTER_COLORS[cid]}">
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        renderChart(r, f, m);
+    }
+
+    // ── Sliders ───────────────────────────────────────────────────────────────
+
+    function getSliderValues() {
+        return {
+            r: +document.getElementById('recency').value,
+            f: +document.getElementById('frequency').value,
+            m: +document.getElementById('monetary').value
+        };
+    }
+
+    function setupSliders() {
+        document.getElementById('recency').addEventListener('input', e => {
+            document.getElementById('recency-val').textContent = e.target.value;
+            const { r, f, m } = getSliderValues();
+            updateUI(r, f, m);
+        });
+
+        document.getElementById('frequency').addEventListener('input', e => {
+            document.getElementById('frequency-val').textContent = e.target.value;
+            const { r, f, m } = getSliderValues();
+            updateUI(r, f, m);
+        });
+
+        document.getElementById('monetary').addEventListener('input', e => {
+            document.getElementById('monetary-val').textContent =
+                '£' + (+e.target.value).toLocaleString();
+            const { r, f, m } = getSliderValues();
+            updateUI(r, f, m);
+        });
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────────
+
+    fetch('data.json')
+        .then(res => res.json())
+        .then(data => {
+            appData = data;
+            setupSliders();
+            updateUI(30, 5, 500);
+        })
+        .catch(err => {
+            document.getElementById('chart3d').innerHTML =
+                `<div class="loading-msg" style="color:#ef4444">
+                    Failed to load data.json — ${err.message}
+                 </div>`;
+        });
+</script>
+</body>
+</html>
