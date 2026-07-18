@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import joblib
 import plotly.express as px
+from pathlib import Path
+
+WORKBOOK = Path(__file__).parent.parent / "workbook"
 
 # --- 1. Page Configuration ---
 st.set_page_config(page_title="InsightCommerce AI", layout="wide")
@@ -12,19 +15,19 @@ st.markdown("Predictive Churn & LTV Segmentation Engine built by [Your Name]")
 # --- 2. Load the AI Brain (Cached for speed) ---
 @st.cache_resource
 def load_models():
-    scaler = joblib.load('../sql/scaler.joblib')
-    rf_model = joblib.load('../sql/rf_model.joblib')
-    df = pd.read_parquet('../sql/dashboard_data.parquet')
+    scaler = joblib.load(WORKBOOK / 'scaler.joblib')
+    rf_model = joblib.load(WORKBOOK / 'rf_model.joblib')
+    df = pd.read_parquet(WORKBOOK / 'dashboard_data.parquet')
     return scaler, rf_model, df
 
 scaler, rf_model, df = load_models()
 
 # Mapping the cluster numbers to Business Labels (Adjust these based on your K=4 results)
 cluster_names = {
-    0: "The Lost (High Churn)",
-    1: "At-Risk Loyalists",
-    2: "The Champions",
-    3: "Recent Bargain Hunters"
+    0: "Promising (Low Engagement)",
+    1: "The Champions",
+    2: "At-Risk Loyalists",
+    3: "The Lost (Churned)"
 }
 
 # --- 3. Sidebar: User Input (The "What-If" Engine) ---
